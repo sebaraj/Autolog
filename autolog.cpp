@@ -23,31 +23,68 @@ std::string getCurrentTime() {
 
 // Function to calculate the time difference
 std::string calculateTimeDifference(const std::string &startTimeStr) {
-  // Define the format for the input time
-  std::tm startTime = {};
+  std::cout << startTimeStr << std::endl;
+  std::tm startTm = {};
   std::istringstream ss(startTimeStr);
-  ss >> std::get_time(&startTime, "%m/%d  %I:%M%p");
+  ss >> std::get_time(&startTm, "%m/%d  %I:%M%p");
 
   if (ss.fail()) {
-    throw std::runtime_error("Failed to parse time string");
+    return "Invalid input format";
   }
-  // Get the current time
-  std::time_t now = std::time(nullptr);
-  std::tm *nowTm = std::localtime(&now);
+  /*if (startTm.tm_hour == 12) {
+    startTm.tm_hour = 0; // 12 AM is 0 in 24-hour format
+  }
+  if (startTimeStr.find("PM") != std::string::npos && startTm.tm_hour != 12) {
+    startTm.tm_hour += 12;
+  }*/
 
-  // Calculate the difference in seconds
-  std::time_t startEpoch = std::mktime(&startTime);
-  std::time_t nowEpoch = std::mktime(nowTm);
-  int difference = static_cast<int>(std::difftime(nowEpoch, startEpoch));
+  auto now = std::chrono::system_clock::now();
+  std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
+  std::tm *currentTm = std::localtime(&nowTime);
 
-  // Convert the difference to hours and minutes
-  int hours = difference / 3600;
-  int minutes = (difference % 3600) / 60;
+  startTm.tm_year = currentTm->tm_year;
+  startTm.tm_isdst = -1;
 
-  // Format the result as "HH:MM"
+  // Handle year rollover
+  if (startTm.tm_mon < currentTm->tm_mon ||
+      (startTm.tm_mon == currentTm->tm_mon &&
+       startTm.tm_mday < currentTm->tm_mday)) {
+    startTm.tm_year++;
+  }
+
+  std::time_t startTime = std::mktime(&startTm);
+  // startTm.tm_hour--;
+  double diffSeconds = std::difftime(nowTime, startTime);
+
+  // Debug output
+  std::cout << "Start time: " << startTm.tm_year + 1900 << "-"
+            << std::setfill('0') << std::setw(2) << startTm.tm_mon + 1 << "-"
+            << std::setfill('0') << std::setw(2) << startTm.tm_mday << " "
+            << std::setfill('0') << std::setw(2) << startTm.tm_hour << ":"
+            << std::setfill('0') << std::setw(2) << startTm.tm_min << ":"
+            << std::setfill('0') << std::setw(2) << startTm.tm_sec << std::endl;
+
+  std::cout << "Current time: " << currentTm->tm_year + 1900 << "-"
+            << std::setfill('0') << std::setw(2) << currentTm->tm_mon + 1 << "-"
+            << std::setfill('0') << std::setw(2) << currentTm->tm_mday << " "
+            << std::setfill('0') << std::setw(2) << currentTm->tm_hour << ":"
+            << std::setfill('0') << std::setw(2) << currentTm->tm_min << ":"
+            << std::setfill('0') << std::setw(2) << currentTm->tm_sec
+            << std::endl;
+
+  std::cout << "Time difference in seconds: " << diffSeconds << std::endl;
+
+  // Ensure the difference is always positive
+  diffSeconds = std::abs(diffSeconds);
+
+  int hours = static_cast<int>(diffSeconds) / 3600;
+  int minutes = (static_cast<int>(diffSeconds) % 3600) / 60;
+
   std::ostringstream result;
   result << std::setfill('0') << std::setw(2) << hours << ":"
          << std::setfill('0') << std::setw(2) << minutes;
+
+  std::cout << "Formatted time difference: " << result.str() << std::endl;
 
   return result.str();
 }
@@ -212,15 +249,16 @@ void stopLog() {
     if (line.find("   ") != std::string::npos && !foundIncompleteEntry) {
       startTime = line.substr(0, 14); // Extract start time
       timeSpent = calculateTimeDifference(startTime);
+      std::cout << "\'" << timeSpent << "\'" << std::endl;
       line = line.substr(0, 16) + timeSpent +
              "  "; // Update the line with the time spent
       foundIncompleteEntry = true;
     }
 
     if (line.length() >= 20 &&
-        line.substr(14, 5).find(":") != std::string::npos) {
+        line.substr(16, 5).find(":") != std::string::npos) {
       // Extract time spent and add it to the total
-      std::string time = line.substr(14, 5);
+      std::string time = line.substr(16, 5);
       std::cout << time << std::endl; // remove
       int hours = std::stoi(time.substr(0, 2));
       int minutes = std::stoi(time.substr(3, 2));
@@ -242,9 +280,9 @@ void stopLog() {
   logLines.back() += workCompleted; // Append work completed to the last entry
 
   // Calculate the total time spent after adding the new entry
-  int newHours = std::stoi(timeSpent.substr(0, 2));
-  int newMinutes = std::stoi(timeSpent.substr(3, 2));
-  totalMinutesSpent += (newHours * 60) + newMinutes;
+  // int newHours = std::stoi(timeSpent.substr(0, 2));
+  // int newMinutes = std::stoi(timeSpent.substr(3, 2));
+  // totalMinutesSpent += (newHours * 60) + newMinutes;
   int totalHours = totalMinutesSpent / 60;
   int totalMinutes = totalMinutesSpent % 60;
 
