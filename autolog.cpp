@@ -17,26 +17,19 @@ std::string getCurrentTime() {
   auto now = std::chrono::system_clock::now();
   auto now_c = std::chrono::system_clock::to_time_t(now);
   std::ostringstream oss;
-  oss << std::put_time(std::localtime(&now_c), "%m/%d %I:%M%p");
+  oss << std::put_time(std::localtime(&now_c), "%m/%d  %I:%M%p");
   return oss.str();
 }
 
 // Function to calculate the time difference
 std::string calculateTimeDifference(const std::string &startTimeStr) {
-  std::cout << startTimeStr << std::endl;
   std::tm startTm = {};
   std::istringstream ss(startTimeStr);
   ss >> std::get_time(&startTm, "%m/%d  %I:%M%p");
 
   if (ss.fail()) {
-    return "Invalid input format";
+    return "";
   }
-  /*if (startTm.tm_hour == 12) {
-    startTm.tm_hour = 0; // 12 AM is 0 in 24-hour format
-  }
-  if (startTimeStr.find("PM") != std::string::npos && startTm.tm_hour != 12) {
-    startTm.tm_hour += 12;
-  }*/
 
   auto now = std::chrono::system_clock::now();
   std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
@@ -53,27 +46,28 @@ std::string calculateTimeDifference(const std::string &startTimeStr) {
   }
 
   std::time_t startTime = std::mktime(&startTm);
-  // startTm.tm_hour--;
   double diffSeconds = std::difftime(nowTime, startTime);
 
   // Debug output
-  std::cout << "Start time: " << startTm.tm_year + 1900 << "-"
-            << std::setfill('0') << std::setw(2) << startTm.tm_mon + 1 << "-"
-            << std::setfill('0') << std::setw(2) << startTm.tm_mday << " "
-            << std::setfill('0') << std::setw(2) << startTm.tm_hour << ":"
-            << std::setfill('0') << std::setw(2) << startTm.tm_min << ":"
-            << std::setfill('0') << std::setw(2) << startTm.tm_sec << std::endl;
+  /*
+    std::cout << "Start time: " << startTm.tm_year + 1900 << "-"
+              << std::setfill('0') << std::setw(2) << startTm.tm_mon+1 << "-"
+              << std::setfill('0') << std::setw(2) << startTm.tm_mday << " "
+              << std::setfill('0') << std::setw(2) << startTm.tm_hour << ":"
+              << std::setfill('0') << std::setw(2) << startTm.tm_min << ":"
+              << std::setfill('0') << std::setw(2) << startTm.tm_sec <<
+    std::endl;
 
-  std::cout << "Current time: " << currentTm->tm_year + 1900 << "-"
-            << std::setfill('0') << std::setw(2) << currentTm->tm_mon + 1 << "-"
-            << std::setfill('0') << std::setw(2) << currentTm->tm_mday << " "
-            << std::setfill('0') << std::setw(2) << currentTm->tm_hour << ":"
-            << std::setfill('0') << std::setw(2) << currentTm->tm_min << ":"
-            << std::setfill('0') << std::setw(2) << currentTm->tm_sec
-            << std::endl;
+    std::cout << "Current time: " << currentTm->tm_year + 1900 << "-"
+              << std::setfill('0') << std::setw(2) << currentTm->tm_mon+1 << "-"
+              << std::setfill('0') << std::setw(2) << currentTm->tm_mday << " "
+              << std::setfill('0') << std::setw(2) << currentTm->tm_hour << ":"
+              << std::setfill('0') << std::setw(2) << currentTm->tm_min << ":"
+              << std::setfill('0') << std::setw(2) << currentTm->tm_sec
+              << std::endl;
 
-  std::cout << "Time difference in seconds: " << diffSeconds << std::endl;
-
+    std::cout << "Time difference in seconds: " << diffSeconds << std::endl;
+  */
   // Ensure the difference is always positive
   diffSeconds = std::abs(diffSeconds);
 
@@ -83,8 +77,6 @@ std::string calculateTimeDifference(const std::string &startTimeStr) {
   std::ostringstream result;
   result << std::setfill('0') << std::setw(2) << hours << ":"
          << std::setfill('0') << std::setw(2) << minutes;
-
-  std::cout << "Formatted time difference: " << result.str() << std::endl;
 
   return result.str();
 }
@@ -189,7 +181,7 @@ void startLog() {
   // file.close();
 
   if (!foundTotalTimeSpent) {
-    std::cerr << "Error: 'TOTAL time spent' line not found.\n";
+    std::cerr << "Error: File formatted incorrectly.\n";
     return;
   }
   logLines.pop_back();
@@ -205,8 +197,7 @@ void startLog() {
   }
 
   // Insert the new start time entry before the "TOTAL time spent" line
-  logLines.push_back(currentTime.substr(0, 5) + " " + currentTime.substr(5) +
-                     "   ");
+  logLines.push_back(currentTime + "   ");
 
   // Write back all lines including the "TOTAL time spent" line
   std::ofstream outFile(logFile);
@@ -249,7 +240,6 @@ void stopLog() {
     if (line.find("   ") != std::string::npos && !foundIncompleteEntry) {
       startTime = line.substr(0, 14); // Extract start time
       timeSpent = calculateTimeDifference(startTime);
-      std::cout << "\'" << timeSpent << "\'" << std::endl;
       line = line.substr(0, 16) + timeSpent +
              "  "; // Update the line with the time spent
       foundIncompleteEntry = true;
@@ -259,7 +249,6 @@ void stopLog() {
         line.substr(16, 5).find(":") != std::string::npos) {
       // Extract time spent and add it to the total
       std::string time = line.substr(16, 5);
-      std::cout << time << std::endl; // remove
       int hours = std::stoi(time.substr(0, 2));
       int minutes = std::stoi(time.substr(3, 2));
       totalMinutesSpent += (hours * 60) + minutes;
@@ -273,16 +262,13 @@ void stopLog() {
     return;
   }
 
-  std::cout << "Enter work completed: ";
+  std::cout << "Description of Completed Work: ";
   std::string workCompleted;
   std::getline(std::cin, workCompleted);
   logLines.pop_back();
-  logLines.back() += workCompleted; // Append work completed to the last entry
+  logLines.back() += workCompleted;
 
   // Calculate the total time spent after adding the new entry
-  // int newHours = std::stoi(timeSpent.substr(0, 2));
-  // int newMinutes = std::stoi(timeSpent.substr(3, 2));
-  // totalMinutesSpent += (newHours * 60) + newMinutes;
   int totalHours = totalMinutesSpent / 60;
   int totalMinutes = totalMinutesSpent % 60;
 
@@ -345,87 +331,64 @@ void addCollaborator(int argc, char *argv[]) {
   outFile.close();
 }
 
-// Function to add a collaborator
-void addCollaborator(const std::string &firstName,
-                     const std::string &lastName) {
-  std::string logFile = findLogFile();
-  if (logFile.empty()) {
-    std::cerr << "Error: No log file found.\n";
-    return;
-  }
-
-  std::ifstream file(logFile);
-  std::string logContent;
-  std::string line;
-  while (std::getline(file, line)) {
-    if (line.find("I discussed my solution with:") != std::string::npos) {
-      if (line.back() != ' ') {
-        line += ", ";
-      }
-      line += firstName + " " + lastName;
-    }
-    logContent += line + "\n";
-  }
-  file.close();
-
-  std::ofstream outFile(logFile);
-  outFile << logContent;
-  outFile.close();
-}
-
 // Main function
 int main(int argc, char *argv[]) {
-  if (argc < 2) {
-    std::cerr << "Usage: autolog <command> [arguments]\n";
-    return 1;
-  }
-
-  std::string command = argv[1];
-
-  if (command == "create") {
-    if (argc < 3) {
-      std::cerr << "Usage: autolog create <filename>\n";
+  try {
+    if (argc < 2) {
+      std::cerr << "Usage: autolog <command> [arguments]\n";
       return 1;
     }
-    createLogFile(argv[2]);
 
-    std::cout << "Enter your estimate of time to complete the assignment: ";
-    std::string estimate;
-    std::getline(std::cin, estimate);
-    estimate = trim(estimate); // Trim the input
+    std::string command = argv[1];
 
-    // Read the entire file content and insert the estimate
-    std::ifstream file(argv[2]);
-    std::string line;
-    std::ostringstream oss;
-    bool estimateInserted = false;
-
-    while (std::getline(file, line)) {
-      if (line.find("ESTIMATE of time to complete assignment:") !=
-              std::string::npos &&
-          !estimateInserted) {
-        oss << line << "" << estimate << " hours" << "\n";
-        estimateInserted = true;
-      } else {
-        oss << line << "\n";
+    if (command == "create") {
+      if (argc < 3) {
+        std::cerr << "Usage: autolog create <filename>\n";
+        return 1;
       }
-    }
-    file.close();
+      createLogFile(argv[2]);
 
-    // Write the updated content back to the file
-    std::ofstream fileWrite(argv[2]);
-    fileWrite << oss.str();
-    fileWrite.close();
-  } else if (command == "start") {
-    startLog();
-  } else if (command == "stop") {
-    stopLog();
-  } else if (command == "collab") {
-    addCollaborator(argc, argv);
-  } else {
-    std::cerr << "Unknown command: " << command << "\n";
+      std::cout << "Enter your estimate of time to complete the assignment: ";
+      std::string estimate;
+      std::getline(std::cin, estimate);
+      estimate = trim(estimate); // Trim the input
+
+      // Read the entire file content and insert the estimate
+      std::ifstream file(argv[2]);
+      std::string line;
+      std::ostringstream oss;
+      bool estimateInserted = false;
+
+      while (std::getline(file, line)) {
+        if (line.find("ESTIMATE of time to complete assignment:") !=
+                std::string::npos &&
+            !estimateInserted) {
+          oss << line << "" << estimate << " hours" << "\n";
+          estimateInserted = true;
+        } else {
+          oss << line << "\n";
+        }
+      }
+      file.close();
+
+      // Write the updated content back to the file
+      std::ofstream fileWrite(argv[2]);
+      fileWrite << oss.str();
+      fileWrite.close();
+    } else if (command == "start") {
+      startLog();
+    } else if (command == "stop") {
+      stopLog();
+    } else if (command == "collab") {
+      addCollaborator(argc, argv);
+    } else {
+      std::cerr << "Unknown command: " << command << "\n";
+      return 1;
+    }
+
+    return 0;
+  } catch (...) {
+    std::cerr << "Runtime error: please try again\n";
     return 1;
   }
-
-  return 0;
 }
